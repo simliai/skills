@@ -201,11 +201,11 @@ Notes: OpenAI's Agents SDK (`@openai/agents`, `RealtimeSession`) accepts your ow
 
 ### Vapi
 
-Starter: https://github.com/simliai/create-simli-app-vapi (`@vapi-ai/web` 3.x, which needs Node.js 22.14+).
+There's no maintained Simli starter for Vapi; these notes are from an archived one (`@vapi-ai/web` 3.x, which needs Node.js 22.14+).
 
 - Only Vapi's **public** key goes to the browser (that's how Vapi's web SDK works): name it `NEXT_PUBLIC_VAPI_PUBLIC_KEY`, restrict its allowed origins and assistants in the Vapi dashboard, and keep transient assistants disabled. The private key never goes client-side; for a stricter setup, sign a short-lived Vapi token on the server. The Simli key stays server-side as always.
 - Get the assistant's audio: `vapi.on("audio", (player) => …)` or `vapi.getAudioPlayer()`, then take the track from `player.srcObject`. Silence Vapi's own playback with `vapi.setVolume(0)`.
-- Two audio styles work: stream the track (`listenToMediastreamTrack`, `handleSilence: false`, lowest latency), or, as the starter does for better lip-sync, buffer the assistant's speech between Vapi's `speech-start` and `speech-end` events and send it with `sendAudioDataImmediate` (first ~1 s) then `sendAudioData` (`handleSilence: true`), at the cost of about 1 s extra delay. `speech-start`/`speech-end` come from an audio-level check that stays "speaking" for about 1 s after the last sound.
+- Two audio styles work: stream the track (`listenToMediastreamTrack`, `handleSilence: false`, lowest latency), or, for better lip-sync, buffer the assistant's speech between Vapi's `speech-start` and `speech-end` events and send it with `sendAudioDataImmediate` (first ~1 s) then `sendAudioData` (`handleSilence: true`), at the cost of about 1 s extra delay. `speech-start`/`speech-end` come from an audio-level check that stays "speaking" for about 1 s after the last sound.
 - Interruptions: call `ClearBuffer()` on the `message` event with `type === "user-interrupted"`.
 
 ### Your own STT → LLM → TTS pipeline

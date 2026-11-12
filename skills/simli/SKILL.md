@@ -88,7 +88,6 @@ Each is maintained by Simli and keeps every key on the server (check that the re
 - LiveKit Agents + OpenAI Realtime + web page: https://github.com/simliai/create-simli-app-livekit-agents
 - Pipecat + OpenAI Realtime + web page: https://github.com/simliai/create-simli-app-pipecat
 - ElevenLabs Agents in Next.js: https://github.com/simliai/create-simli-app-elevenlabs
-- Vapi in the browser: https://github.com/simliai/create-simli-app-vapi
 - OpenAI Realtime (WebRTC) in Next.js: https://github.com/simliai/create-simli-app-openai
 - Deepgram + OpenAI + ElevenLabs in Next.js with its own server: https://github.com/simliai/create-simli-app
 
