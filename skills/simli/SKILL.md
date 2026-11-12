@@ -45,7 +45,7 @@ Before writing integration code, check the key and face with the bundled script.
 python3 scripts/check_setup.py            # reads SIMLI_API_KEY and SIMLI_FACE_ID from env or ./.env
 ```
 
-If `SIMLI_FACE_ID` isn't set, the script checks the Anna preset. If there's no key yet, write the code anyway, and tell the user to run the script once they've added the key.
+If `SIMLI_FACE_ID` isn't set, the script checks Simli's default face. If there's no key yet, write the code anyway, and tell the user to run the script once they've added the key.
 
 ## Rules that apply to every path
 
