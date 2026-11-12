@@ -141,9 +141,11 @@ def main() -> int:
             label = "preset Anna" if face == DEFAULT_FACE else "face"
             if status == 200 and isinstance(body, dict):
                 version = body.get("simli_version")
-                print(f"✓ Face {face} ({body.get('name') or label}) can be used. Model version: {version}")
+                gen = {3: "Trinity-2"}.get(version, "an older generation: no 16:9, camera or backgrounds")
+                print(f"✓ Face {face} ({body.get('name') or label}) can be used. Model version {version} ({gen}).")
             elif status == 404:
-                print(f"✗ Face {face} doesn't exist. Use a preset or an ID from the dashboard.")
+                print(f"✗ Face {face} wasn't found. If it's an older (pre-Trinity) face it may still work,")
+                print("  but it can't be checked here; prefer a Trinity-2 preset or a face from the dashboard.")
                 ok = False
             elif status == 403:
                 print(f"✗ Face {face} belongs to another account and isn't public.")

@@ -15,7 +15,7 @@ pip install "livekit-agents[openai,simli]" python-dotenv
 # or: uv add "livekit-agents[openai,simli]" python-dotenv
 ```
 
-The starter repo pins tested versions (`livekit-agents==1.8.9`, `livekit-plugins-simli==1.8.9`). If the user's project is on an older `livekit-agents` 1.x, the same code applies; on 0.x, upgrade first.
+The starter repo pins `livekit-agents==1.8.9`. Prefer **1.8.10 or later** for new code, since the Simli plugin then supports Trinity-2 options natively (see below). On an older `livekit-agents` 1.x the same code applies; on 0.x, upgrade first.
 
 `.env`:
 
@@ -104,7 +104,26 @@ If the user's frontend issues tokens without agent dispatch and they rely on aut
 
 ## Trinity-2 options (16:9, position, camera, background)
 
-The released plugin's `SimliConfig` only sends the face ID (with a legacy suffix) and the time limits. Until the plugin supports Trinity-2 fields, subclass it and override `create_json()`, which builds the body of `POST /compose/token`:
+**`livekit-plugins-simli` 1.8.10 and later** take the Trinity-2 options directly and send the plain face ID. Use them:
+
+```python
+simli.SimliConfig(
+    api_key=os.environ["SIMLI_API_KEY"],
+    face_id=face_id,
+    max_session_length=600,
+    max_idle_time=300,
+    streaming_width=1366,  # 1:1, 16:9 or 9:16; each side >= 512
+    streaming_height=768,
+    avatar_position_x=0.5,
+    avatar_position_y=1.0,
+    camera={"zoom": 1.2},  # optional
+    background_id=None,  # optional, from POST /assets/backgrounds
+)
+```
+
+Note that the plugin's default `max_idle_time` is 30 seconds. Set it explicitly.
+
+**On 1.8.9 or older**, either upgrade (`pip install -U "livekit-agents[openai,simli]"`), or subclass `SimliConfig` and override `create_json()`, which builds the body of `POST /compose/token`. Check with `pip show livekit-plugins-simli`.
 
 ```python
 from dataclasses import dataclass
@@ -135,7 +154,7 @@ class Trinity2Config(simli.SimliConfig):
         return body
 ```
 
-Use `Trinity2Config(...)` in place of `simli.SimliConfig(...)`. Before adding this, check the installed plugin: if `simli.SimliConfig` already has `streaming_width` or similar fields, use those instead.
+Use `Trinity2Config(...)` in place of `simli.SimliConfig(...)`, only on plugin versions before 1.8.10.
 
 ## Errors
 
