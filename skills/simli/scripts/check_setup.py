@@ -98,8 +98,22 @@ def main() -> int:
 
     load_env_file(Path(args.env))
     key = os.environ.get("SIMLI_API_KEY", "").strip()
-    face = args.face or os.environ.get("SIMLI_FACE_ID", "").strip() or DEFAULT_FACE
+    public_name = None
+    if not key:
+        # Older Simli starters used browser-exposed names. Accept them, but flag them.
+        for name in ("NEXT_PUBLIC_SIMLI_API_KEY", "VITE_SIMLI_API_KEY", "REACT_APP_SIMLI_API_KEY", "EXPO_PUBLIC_SIMLI_API_KEY"):
+            if os.environ.get(name, "").strip():
+                key, public_name = os.environ[name].strip(), name
+                break
+    face = (args.face or os.environ.get("SIMLI_FACE_ID", "").strip()
+            or os.environ.get("NEXT_PUBLIC_SIMLI_FACE_ID", "").strip() or DEFAULT_FACE)
     ok = True
+
+    if public_name:
+        print(f"! The key is in {public_name}. That prefix ships it to every browser that loads the app.")
+        print("  Rename it to SIMLI_API_KEY, use it only in a server route that creates session tokens,")
+        print("  and rotate the key if this app was ever deployed publicly.")
+        ok = False
 
     if not key:
         print("✗ SIMLI_API_KEY is not set. Get a key at https://app.simli.com and put it in .env:")
@@ -107,9 +121,11 @@ def main() -> int:
         ok = False
     else:
         print(f"SIMLI_API_KEY found ({len(key)} characters; not shown).")
+        key_ok = False
         status, body = get("/ratelimiter/sessions", key)
         if status == 200 and isinstance(body, dict):
             print(f"✓ API key works. Sessions running right now: {body.get('currentUsage', '?')}")
+            key_ok = True
         elif status == 401:
             print("✗ API key rejected (401). Check for typos, quotes or whitespace, or create a new key.")
             ok = False
@@ -118,8 +134,9 @@ def main() -> int:
             ok = False
         else:
             print(f"? Unexpected answer checking the key: {status} {body}")
+            key_ok = True  # can't tell; still try the face
 
-        if ok:
+        if key_ok:
             status, body = get(f"/face/{face}", key)
             label = "preset Anna" if face == DEFAULT_FACE else "face"
             if status == 200 and isinstance(body, dict):
