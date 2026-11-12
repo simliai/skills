@@ -31,12 +31,13 @@ Also read [references/trinity-2.md](references/trinity-2.md) when the user wants
 
 | Preset | Face ID |
 |---|---|
+| Simli default (a woman) | `14c60d62-6ebf-424d-b626-1f4f91c33b04` |
 | Anna | `bf13113a-355a-4d97-8b90-4edccd1da7b2` |
 | Lukas | `a36d66df-a23d-4569-996b-d0e990019857` |
 | Mei | `084479bf-de7c-4df0-8d9c-5484193ecd27` |
 | Mateo | `99767950-9d68-4783-a305-9118006d3363` |
 
-The full list is at https://docs.simli.com/api-reference/preset-faces.md. All presets are Trinity-2 faces. Read the face ID from `SIMLI_FACE_ID` with a preset as the fallback, so the user can swap avatars without code changes.
+The full list is at https://docs.simli.com/api-reference/preset-faces.md. All of these are Trinity-2 faces; match the agent's voice to the face (the default is a woman). Read the face ID from `SIMLI_FACE_ID` with Simli's default face as the fallback, so the user can swap avatars without code changes.
 
 Before writing integration code, check the key and face with the bundled script. It only makes read-only API calls (no session, no billed minutes) and never prints the key:
 

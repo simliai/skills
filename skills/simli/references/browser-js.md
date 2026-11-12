@@ -26,7 +26,7 @@ export async function POST() {
     const { session_token, warnings } = await generateSimliSessionToken({
       apiKey: process.env.SIMLI_API_KEY!,
       config: {
-        faceId: process.env.SIMLI_FACE_ID || "bf13113a-355a-4d97-8b90-4edccd1da7b2", // || so an empty var falls back
+        faceId: process.env.SIMLI_FACE_ID || "14c60d62-6ebf-424d-b626-1f4f91c33b04", // || so an empty var falls back
         maxSessionLength: 600, // seconds
         maxIdleTime: 180, // seconds
         handleSilence: true, // see "handleSilence" below
@@ -51,7 +51,7 @@ export async function POST() {
 curl -X POST https://api.simli.ai/compose/token \
   -H "x-simli-api-key: $SIMLI_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"faceId":"bf13113a-355a-4d97-8b90-4edccd1da7b2","maxSessionLength":600,"maxIdleTime":180}'
+  -d '{"faceId":"14c60d62-6ebf-424d-b626-1f4f91c33b04","maxSessionLength":600,"maxIdleTime":180}'
 # -> {"session_token": "...", "warnings": []}
 ```
 
