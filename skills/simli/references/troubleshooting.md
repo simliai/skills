@@ -35,6 +35,25 @@ Start with `python3 scripts/check_setup.py`: it confirms the key, the face and t
 | Session ends after a few minutes | `maxIdleTime` reached (no audio) or `maxSessionLength` reached | Raise them, or handle the `stop` event and offer a restart |
 | Lip-sync drifts | Audio sent faster than real time from a non-buffered source, or mixed sources | Send through one path; let the SDK queue; don't mix `sendAudioData` and track listening |
 
+## Showing errors to the user
+
+The JS SDK rejects `start()` (and fires `error`) with a string such as `"ERROR: INVALID_FACE_ID"`. Token routes return the API's error body. Map them to something actionable:
+
+```typescript
+export function explainSimliError(raw: string): string {
+  const m = raw.toUpperCase();
+  if (m.includes("401") || m.includes("UNAUTHORIZED")) return `${raw}: check SIMLI_API_KEY on the server.`;
+  if (m.includes("INVALID_FACE_ID")) return `${raw}: the face ID doesn't exist. Use a preset or copy it from the dashboard.`;
+  if (m.includes("FACE_NOT_ALLOWED")) return `${raw}: that face belongs to another Simli account.`;
+  if (m.includes("422")) return `${raw}: invalid video framing (must be 1:1, 16:9 or 9:16, each side >= 512).`;
+  if (m.includes("429") || m.includes("RATE")) return `${raw}: too many Simli sessions running. Stop others or upgrade the plan.`;
+  if (m.includes("TOO MANY RETRY")) return `${raw}: the browser can't reach Simli's media servers (firewall or VPN?).`;
+  return raw;
+}
+```
+
+In Python, catch `SimliAPIError` (`status_code`, `detail`) and map the same codes.
+
 ## Before asking for help
 
 Collect: SDK and framework versions, the face ID (not the API key), the exact error text, and the `session_id` (JS: the `destination` event; logs in Python and plugins). Then ask on Discord: https://discord.gg/yQx49zNF4d. Never paste the API key into issues, chats or logs.

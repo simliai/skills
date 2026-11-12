@@ -26,10 +26,13 @@ export async function POST() {
     const { session_token, warnings } = await generateSimliSessionToken({
       apiKey: process.env.SIMLI_API_KEY!,
       config: {
-        faceId: process.env.SIMLI_FACE_ID ?? "bf13113a-355a-4d97-8b90-4edccd1da7b2",
+        faceId: process.env.SIMLI_FACE_ID || "bf13113a-355a-4d97-8b90-4edccd1da7b2", // || so an empty var falls back
         maxSessionLength: 600, // seconds
         maxIdleTime: 180, // seconds
         handleSilence: true, // see "handleSilence" below
+        // For 16:9 (desktop) — the player's CSS aspect-ratio must match:
+        // streaming_width: 1366, streaming_height: 768,
+        // For 9:16 (mobile portrait): streaming_width: 768, streaming_height: 1366,
       },
     });
     if (warnings?.length) console.warn("Simli:", warnings);
@@ -94,27 +97,31 @@ export function Avatar() {
 
       // The constructor opens the connection: create it right before start().
       const client = new SimliClient(session_token, videoRef.current!, audioRef.current!, null, LogLevel.ERROR);
-      client.on("stop", () => setStatus("idle")); // ended by maxSessionLength / maxIdleTime
-      client.on("error", (detail) => { setError(detail); setStatus("error"); });
+      // "stop" also fires after our own stop(); the ref check keeps that from looking like a remote end.
+      client.on("stop", () => { if (clientRef.current === client) { clientRef.current = null; setStatus("idle"); } });
+      // During start(), Simli refusals fire "error" AND reject start(): keep handling idempotent.
+      client.on("error", (detail) => { setError(explainSimliError(detail)); setStatus("error"); });
       clientRef.current = client;
       await client.start(); // resolves when the first video frame is on screen
       setStatus("live");
       // Now start the voice agent / send audio (see below).
     } catch (e) {
-      setError(String(e));
+      setError(explainSimliError(String(e))); // helper in troubleshooting.md
       setStatus("error");
     }
   }
 
   async function stop() {
-    await clientRef.current?.stop();
+    const client = clientRef.current;
     clientRef.current = null;
     setStatus("idle");
+    await client?.stop();
   }
 
   return (
     <div>
-      <video ref={videoRef} autoPlay playsInline style={{ width: "100%", aspectRatio: "1 / 1", objectFit: "cover" }} />
+      {/* muted: the voice plays through the separate <audio>, which is Simli's in-sync audio */}
+      <video ref={videoRef} autoPlay playsInline muted style={{ width: "100%", aspectRatio: "1 / 1", objectFit: "cover" }} />
       <audio ref={audioRef} autoPlay />
       {status === "starting" && <p>Connecting…</p>}
       {status === "error" && <p role="alert">{error}</p>}
@@ -127,7 +134,8 @@ export function Avatar() {
 - Set the CSS `aspectRatio` to the stream's shape (`1 / 1` for the default 768x768, `16 / 9` for 1366x768).
 - A `SimliClient` runs **one** session. To restart, fetch a new token and create a new client.
 - Register `on(...)` handlers before `start()`.
-- Stop the client on unmount and on `pagehide`, so closed tabs don't keep billing until `maxIdleTime`.
+- Stop the client on unmount and on `pagehide`, so closed tabs don't keep billing until `maxIdleTime`. `pagehide` can't wait for the async `stop()`; that's fine, since Simli also ends the session when the connection drops.
+- If the page also runs a voice agent connection, link the two lifecycles: when either ends, end both.
 - `LogLevel.DEBUG` logs every audio chunk: use `INFO` while developing and `ERROR` in production.
 
 ## 3. Feeding audio
@@ -166,16 +174,14 @@ Set `handleSilence: false` in the token config for this style: a live track alre
 
 ### ElevenLabs Agents (WebSocket)
 
-- Server: get a signed URL with the ElevenLabs key (`GET https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=...`, header `xi-api-key`) and return it to the browser. Never send the ElevenLabs key to the browser either.
-- In the ElevenLabs agent settings, set the **agent output audio format to PCM 16000 Hz** (`pcm_16000`), so its audio can go straight to Simli.
-- Browser: start Simli first; after `start()` resolves, open the ElevenLabs WebSocket, then:
-  - `audio` events: `client.sendAudioData(base64ToBytes(event.audio_event.audio_base_64))`
-  - `interruption` events: `client.ClearBuffer()`
-  - `ping` events: answer with `pong` and the same `event_id`
-  - Stream the microphone to ElevenLabs as base64 PCM16 `user_audio_chunk` messages.
+**Read [elevenlabs.md](elevenlabs.md)**: a complete, tested Next.js app (token route, signed-URL route, client component with mic capture, lifecycle and error handling). Key points:
+
+- Both keys stay on the server: Simli via the token route, ElevenLabs via a signed-URL route (`GET https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=...`, header `xi-api-key`, response `{signed_url}`).
+- The ElevenLabs agent's output audio format must be **PCM 16000 Hz** (`pcm_16000`). Its greeting is the agent's **First message** setting.
+- Start Simli first, then open the ElevenLabs socket. `audio` events go to `sendAudioData`, `interruption` to `ClearBuffer()`.
 - Use `handleSilence: true`.
-- Working reference: https://github.com/simliai/create-simli-app-elevenlabs (`app/SimliElevenlabs.tsx`). Note that the starter creates the Simli token in the browser for a local demo — move that to a server route as in step 1.
-- If the user uses the ElevenLabs JS SDK (`@elevenlabs/client`), which plays audio itself, prefer capturing its output with `listenToAudioElement`/`listenToMediastreamTrack` (style B, `handleSilence: false`) over re-implementing the WebSocket.
+- Don't copy `create-simli-app-elevenlabs` as is: it creates the Simli token in the browser.
+- If the user already uses the ElevenLabs JS SDK (`@elevenlabs/client`), which plays audio itself, capture its output with `listenToAudioElement`/`listenToMediastreamTrack` (style B, `handleSilence: false`) instead of re-implementing the WebSocket.
 
 ### OpenAI Realtime
 
