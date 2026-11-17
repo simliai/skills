@@ -1,6 +1,6 @@
 ---
 name: simli
-description: Add a real-time talking AI avatar — a lip-synced video face — to a voice agent, chatbot or web app with Simli. Use when the user wants to give an agent a face, add a talking head, digital human, AI video avatar or lip-sync video to LiveKit Agents, Pipecat, a browser/React/Next.js app (ElevenLabs Agents, OpenAI Realtime, Vapi, any TTS) or a Python program; create a custom avatar from a photo; frame the avatar video (16:9, portrait, position, camera, background); or debug a Simli integration (no video, frozen or silent avatar, robotic audio, 401/400/403/422/429 errors).
+description: Add a real-time talking AI avatar — a lip-synced video face — to a voice agent, chatbot or web app with Simli. Use when the user wants to give an agent a face, add a talking head, digital human, AI video avatar or lip-sync video to LiveKit Agents, Pipecat, a browser/React/Next.js app (Gemini Live, ElevenLabs Agents, OpenAI Realtime, Vapi, any TTS) or a Python program; create a custom avatar from a photo; frame the avatar video (16:9, portrait, position, camera, background); or debug a Simli integration (no video, frozen or silent avatar, robotic audio, 401/400/403/422/429 errors).
 license: MIT
 ---
 
@@ -18,9 +18,9 @@ Ask the user (or infer from their code) where the agent's voice is produced, the
 |---|---|---|
 | is (or can be) a LiveKit Agents worker, or uses LiveKit rooms | LiveKit Agents plugin `livekit-plugins-simli` | [references/livekit.md](references/livekit.md) |
 | is a Pipecat pipeline | Pipecat `SimliVideoService` | [references/pipecat.md](references/pipecat.md) |
-| produces audio in the browser (ElevenLabs Agents, OpenAI Realtime WebRTC, Vapi, browser TTS) | JavaScript SDK `simli-client` + a server token route | [references/browser-js.md](references/browser-js.md); for ElevenLabs Agents also [references/elevenlabs.md](references/elevenlabs.md) (complete tested app) |
+| produces audio in the browser (Gemini Live, ElevenLabs Agents, OpenAI Realtime WebRTC, Vapi, browser TTS) | JavaScript SDK `simli-client` + a server token route | [references/browser-js.md](references/browser-js.md); for ElevenLabs Agents also [references/elevenlabs.md](references/elevenlabs.md) (complete tested app) |
 | is a Python program, or renders video files / frames offline | Python SDK `simli-ai` | [references/python-sdk.md](references/python-sdk.md) |
-| starting from scratch, no preference | LiveKit Agents for production; Pipecat for the fewest accounts (only an OpenAI key) | as above |
+| starting from scratch, no preference | For a free first try, the Gemini Live starter (a free Google AI Studio key, in the browser). For a server-side agent in production, LiveKit Agents (its starter runs on LiveKit Inference: only a LiveKit Cloud project, free Build plan, and no model keys). Pipecat if the user prefers it (its starter needs only an OpenAI key) | as above; starters under [Complete example apps](#complete-example-apps) |
 
 Also read [references/trinity-2.md](references/trinity-2.md) when the user wants a specific video size or shape, avatar position, camera moves, a custom background, or to create an avatar from a photo. Read [references/audio.md](references/audio.md) when audio comes from anything other than the frameworks above. Read [references/troubleshooting.md](references/troubleshooting.md) when something doesn't work.
 
@@ -65,7 +65,7 @@ If `SIMLI_FACE_ID` isn't set, the script checks Simli's default face. If there's
 A demo that works but looks wrong is the main reason people give up. Before calling it done:
 
 - **Match the video shape to the layout.** The default stream is 768x768: keep it for a square tile. For a desktop video-call layout use 16:9 (`1366x768`); for mobile portrait use 9:16 (`768x1366`). Set the same size in the framework's video output and the player's CSS `aspect-ratio`. See [references/trinity-2.md](references/trinity-2.md).
-- **Greet immediately.** Have the agent say a short greeting as soon as the avatar is ready, so the user sees it come alive instead of a still face. For hosted agents (ElevenLabs, Vapi) this is the agent's "first message" setting: tell the user to set it.
+- **Greet immediately.** Have the agent say a short greeting as soon as the avatar is ready, so the user sees it come alive instead of a still face. For hosted agents (ElevenLabs, Vapi) this is the agent's "first message" setting: tell the user to set it (the ElevenLabs starter sets it from `app/avatar.ts`).
 - **Avoid self-interruption.** The avatar's voice plays from the speakers while the mic is open. Open the mic with `echoCancellation: true`, and suggest headphones if the agent still hears itself.
 - **Show the video properly.** `<video autoPlay playsInline>` plus a separate `<audio autoPlay>`. Size the element with CSS `object-fit: cover` (or `contain`) to the stream's aspect ratio. Start sessions from a user click, so browsers allow audio autoplay.
 - **Show a loading state** while the session starts (usually a couple of seconds), and a clear message if it fails.
@@ -86,9 +86,10 @@ A demo that works but looks wrong is the main reason people give up. Before call
 
 Each is maintained by Simli and keeps every key on the server (check that the repo's README doesn't use `NEXT_PUBLIC_` keys; versions before November 2026 did); clone one when the user wants a runnable project rather than an integration into existing code:
 
-- LiveKit Agents + OpenAI Realtime + web page: https://github.com/simliai/create-simli-app-livekit-agents
+- Gemini Live in Next.js, the free start (a free Google AI Studio key, `GEMINI_API_KEY`, plus `SIMLI_API_KEY`): https://github.com/simliai/create-simli-app-gemini
+- ElevenLabs Agents in Next.js (`SIMLI_API_KEY` and `ELEVENLABS_API_KEY` only: the server creates and configures the ElevenLabs agent): https://github.com/simliai/create-simli-app-elevenlabs
+- LiveKit Agents on LiveKit Inference + web page (LiveKit Cloud project credentials and `SIMLI_API_KEY` only, no model keys): https://github.com/simliai/create-simli-app-livekit-agents
 - Pipecat + OpenAI Realtime + web page: https://github.com/simliai/create-simli-app-pipecat
-- ElevenLabs Agents in Next.js: https://github.com/simliai/create-simli-app-elevenlabs
 - OpenAI Realtime (WebRTC) in Next.js: https://github.com/simliai/create-simli-app-openai
 - Deepgram + OpenAI + ElevenLabs in Next.js with its own server: https://github.com/simliai/create-simli-app
 

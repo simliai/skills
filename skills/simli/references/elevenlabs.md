@@ -1,6 +1,8 @@
 # ElevenLabs Agents + Simli: complete Next.js example
 
-A tested, minimal Next.js (App Router, TypeScript) app: click **Start**, talk to an ElevenLabs Conversational AI agent, and it answers through a Simli avatar at 16:9. It type-checks and builds with `next@14.2.35`, `react@18`, `simli-client@3.2.0`; the same code is used in https://github.com/simliai/create-simli-app-elevenlabs on Next 16 / React 19, which also handles a few more edge cases (cancelling a start in progress, `client_error`, the agent's reported input format, a Firefox mic fallback). Copy these files into the user's app and adapt the UI; keep the order and the lifecycle handling.
+A tested, minimal Next.js (App Router, TypeScript) app: click **Start**, talk to an ElevenLabs Conversational AI agent, and it answers through a Simli avatar at 16:9. It type-checks and builds with `next@14.2.35`, `react@18`, `simli-client@3.2.0`; the same code is used in https://github.com/simliai/create-simli-app-elevenlabs on Next 16 / React 19, which also handles a few more edge cases (cancelling a start in progress, `client_error`, the agent's reported input format, a Firefox mic fallback) and creates the ElevenLabs agent itself (see [below](#no-dashboard-steps-let-the-server-manage-the-agent)). Copy these files into the user's app and adapt the UI; keep the order and the lifecycle handling.
+
+This example connects to an agent the user already has (`ELEVENLABS_AGENT_ID`). When the user has no agent yet, or wants the fewest steps, clone the starter instead: it needs only `SIMLI_API_KEY` and `ELEVENLABS_API_KEY`.
 
 ## How it fits together
 
@@ -12,13 +14,24 @@ A tested, minimal Next.js (App Router, TypeScript) app: click **Start**, talk to
 3. **Microphone.** The mic is captured with an AudioWorklet at 16 kHz, converted to PCM16 and sent as base64 `user_audio_chunk` messages.
 4. **Linked lifecycles.** Ending either side ends both: the user clicking End, ElevenLabs closing the conversation, Simli's `stop` (max length or idle), errors, unmount and `pagehide`. `cleanup()` is idempotent, because the `error` event and a rejected `start()` can both fire for one failure.
 
-## Set up the ElevenLabs agent (tell the user)
+## No dashboard steps: let the server manage the agent
 
-In the ElevenLabs dashboard, on the agent:
+The starter needs no ElevenLabs dashboard steps. Unless `ELEVENLABS_AGENT_ID` is set, its signed-URL route (`lib/elevenlabsAgent.ts`) does this with `ELEVENLABS_API_KEY`:
+
+1. **Find** its agent: `GET /v1/convai/agents?tags=simli-starter` (the oldest, if there are several).
+2. **Create** it if there's none: `POST /v1/convai/agents/create`, tagged `simli-starter` and `simli-config-<hash>`.
+3. **Sync:** the `simli-config-<hash>` tag is a hash of the config built from `app/avatar.ts`. If it doesn't match, `PATCH /v1/convai/agents/{id}` updates the agent in place.
+4. **Signed URL:** `GET /v1/convai/conversation/get-signed-url?agent_id=...`, as in the route below.
+
+It sets `conversation_config.tts.agent_output_audio_format` and `conversation_config.asr.user_input_audio_format` to `pcm_16000`, the voice, first message, language, prompt and LLM from `app/avatar.ts`, `conversation.max_duration_seconds` 600, `platform_settings.auth.enable_auth: true` (only signed URLs can start conversations), and `platform_settings.call_limits`. Tools and the knowledge base are left alone. If the user restricts the ElevenLabs key, it needs **ElevenLabs Agents** read and write access. To reuse this in another app, copy the starter's `lib/elevenlabsAgent.ts` rather than rewriting it: it also handles concurrent first requests, a deleted agent and voices missing from the account.
+
+## Or set up the ElevenLabs agent yourself (tell the user)
+
+With your own agent (`ELEVENLABS_AGENT_ID`, as in this example), in the ElevenLabs dashboard, on the agent:
 
 - **Agent output audio format: PCM 16000 Hz** (`pcm_16000`). Without this the avatar gets audio it can't use. The page checks the format the agent reports when the conversation starts, and stops with a clear message if it's wrong.
 - **First message:** set a short greeting, so the avatar speaks as soon as the conversation opens.
-- If the agent is public (no auth), the signed URL is still the safer pattern. It also works with private agents.
+- If the agent is public (no auth), the signed URL is still the safer pattern. It also works with private agents. Turning authentication on, plus call limits and a maximum conversation duration, keeps others from spending the user's credits.
 
 Echo: Simli's voice plays from the speakers while the mic is open. The mic is opened with `echoCancellation: true`. Recommend headphones if the agent still interrupts itself.
 

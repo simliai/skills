@@ -20,6 +20,7 @@ Symptoms of the wrong format: silence or a frozen avatar (Float32 sent as Int16,
 | ElevenLabs TTS API | `output_format=pcm_16000` (use `eleven_flash_v2_5` for low latency; turbo v2.5 is deprecated) | request that format; send |
 | Cartesia | raw `pcm_s16le` at the requested rate | request 16000; send |
 | OpenAI Realtime (WebSocket) | base64 PCM16 at **24 kHz** | decode, resample 24k → 16k, send |
+| Gemini Live API | PCM16 at **24 kHz** (it takes 16 kHz in) | resample 24k → 16k, send |
 | OpenAI TTS `response_format=pcm` | PCM16 at **24 kHz** | resample 24k → 16k |
 | Browser microphone / Web Audio | Float32 at 44.1 or 48 kHz | use `listenToMediastreamTrack` (the SDK converts), or convert yourself |
 | MP3 / Opus / WAV files | encoded / headered | decode with ffmpeg |

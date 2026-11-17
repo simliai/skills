@@ -2,20 +2,21 @@
 
 The Simli plugin adds an avatar participant to the agent's LiveKit room. The agent's voice goes to Simli, and the avatar publishes lip-synced video and voice **on the agent's behalf**, so any LiveKit frontend shows them as the agent's tracks. No frontend changes are needed beyond showing the agent's video.
 
-Live docs: https://docs.simli.com/api-reference/livekit.md
+Live docs: https://docs.simli.com/api-reference/livekit.md. Starter: https://github.com/simliai/create-simli-app-livekit-agents
 
 ## Requirements
 
-- **A LiveKit server reachable from the internet**: LiveKit Cloud (free tier works) or self-hosted with a public address. `localhost` and `livekit-server --dev` do **not** work, because Simli's servers join the room from the internet.
+- **A LiveKit server reachable from the internet**: LiveKit Cloud or self-hosted with a public address. `localhost` and `livekit-server --dev` do **not** work, because Simli's servers join the room from the internet.
 - `SIMLI_API_KEY`, plus the usual `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` (the Simli plugin reads these to give the avatar a join token).
+- Models. The example below, like the starter, runs speech-to-text, the LLM and text-to-speech on **LiveKit Inference** (Deepgram Nova-3, Gemma 4 31B, Cartesia Sonic 3.5), billed to the LiveKit project, so there are no OpenAI, Deepgram or other model keys. Inference runs only on **LiveKit Cloud**; the free Build plan (no card) includes $2.50 of Inference credit a month. On a self-hosted server, use model plugins with their own keys instead.
 - Python 3.10+.
 
 ```bash
-pip install "livekit-agents[openai,simli]" python-dotenv
-# or: uv add "livekit-agents[openai,simli]" python-dotenv
+pip install "livekit-agents>=1.8.11" "livekit-plugins-simli>=1.8.11" python-dotenv
+# or: uv add "livekit-agents>=1.8.11" "livekit-plugins-simli>=1.8.11" python-dotenv
 ```
 
-The starter repo pins `livekit-agents==1.8.9`. Prefer **1.8.10 or later** for new code, since the Simli plugin then supports Trinity-2 options natively (see below). On an older `livekit-agents` 1.x the same code applies; on 0.x, upgrade first.
+The starter repo pins `livekit-agents==1.8.11`. Use **1.8.10 or later** for the Simli plugin's native Trinity-2 options (see below). On an older `livekit-agents` 1.x the avatar code applies; on 0.x, upgrade first.
 
 `.env`:
 
@@ -25,7 +26,6 @@ LIVEKIT_API_KEY=...
 LIVEKIT_API_SECRET=...
 SIMLI_API_KEY=...
 SIMLI_FACE_ID=14c60d62-6ebf-424d-b626-1f4f91c33b04
-OPENAI_API_KEY=...
 ```
 
 ## The integration
@@ -37,8 +37,16 @@ import asyncio
 import os
 
 from dotenv import load_dotenv
-from livekit.agents import Agent, AgentServer, AgentSession, JobContext, cli
-from livekit.plugins import openai, simli
+from livekit.agents import (
+    Agent,
+    AgentServer,
+    AgentSession,
+    JobContext,
+    TurnHandlingOptions,
+    cli,
+    inference,
+)
+from livekit.plugins import simli
 
 load_dotenv()
 
@@ -48,7 +56,13 @@ server = AgentServer()
 # Explicit dispatch: the agent only joins rooms whose token names it.
 @server.rtc_session(agent_name=os.getenv("LIVEKIT_AGENT_NAME") or "simli-agent")
 async def entrypoint(ctx: JobContext) -> None:
-    session = AgentSession(llm=openai.realtime.RealtimeModel(model="gpt-realtime", voice="marin"))
+    # STT, LLM and TTS on LiveKit Inference: the LIVEKIT_* credentials pay for them.
+    session = AgentSession(
+        stt=inference.STT(model="deepgram/nova-3", language="en"),
+        llm=inference.LLM(model="google/gemma-4-31b-it"),
+        tts=inference.TTS(model="cartesia/sonic-3.5", voice="9626c31c-bec5-4cca-baa8-f8ba9e84c8bc"),  # Jacqueline (female, for the default face)
+        turn_handling=TurnHandlingOptions(turn_detection=inference.TurnDetector()),
+    )
 
     await ctx.connect()  # connect first: wait_for_join() only waits once the room is connected
 
@@ -74,7 +88,7 @@ async def entrypoint(ctx: JobContext) -> None:
         return
 
     await session.start(agent=Agent(instructions="You are a friendly voice assistant."), room=ctx.room)
-    session.generate_reply(instructions="Greet the user in one short sentence.")
+    session.say("Hi, I'm Ava. What would you like to talk about?")  # spoken word for word, no LLM wait
 
 
 if __name__ == "__main__":
@@ -83,7 +97,7 @@ if __name__ == "__main__":
 
 Adapting to an existing agent:
 
-- Keep the user's existing `AgentSession` (any STT/LLM/TTS pipeline works, not only OpenAI Realtime). Only add the `simli.AvatarSession` block between `ctx.connect()` and `session.start(...)`.
+- Keep the user's existing `AgentSession` (any STT/LLM/TTS pipeline or realtime model works, not only LiveKit Inference). Only add the `simli.AvatarSession` block between `ctx.connect()` and `session.start(...)`.
 - If their entrypoint uses the older `WorkerOptions(entrypoint_fnc=...)` style, keep that style and insert the same avatar block.
 - Keep the agent's own audio output going to the avatar: don't also publish the agent's TTS audio to the room. `avatar.start(session, ...)` reroutes `session.output.audio` for you.
 
@@ -98,7 +112,7 @@ The agent joins rooms whose token dispatches it by name (`simli-agent` above). T
 
 - LiveKit's Agents Playground (https://agents-playground.livekit.io): connect to the project and set **Agent name** to `simli-agent`.
 - Any LiveKit agent frontend whose token request dispatches that agent name (for example `agent-starter-react`), or the starter's own web page.
-- `python agent.py console` is voice-only in the terminal: there is no room, so there is no avatar.
+- `python agent.py console` is voice-only in the terminal: there is no room, so there is no avatar. With LiveKit Inference it still needs the `LIVEKIT_*` values.
 
 If the user's frontend issues tokens without agent dispatch and they rely on automatic dispatch, remove `agent_name=` from `rtc_session` instead of changing the frontend.
 
@@ -123,7 +137,7 @@ simli.SimliConfig(
 
 Note that the plugin's default `max_idle_time` is 30 seconds. Set it explicitly.
 
-**On 1.8.9 or older**, either upgrade (`pip install -U "livekit-agents[openai,simli]"`), or subclass `SimliConfig` and override `create_json()`, which builds the body of `POST /compose/token`. Check with `pip show livekit-plugins-simli`.
+**On 1.8.9 or older**, either upgrade (`pip install -U livekit-agents livekit-plugins-simli`), or subclass `SimliConfig` and override `create_json()`, which builds the body of `POST /compose/token`. Check with `pip show livekit-plugins-simli`.
 
 ```python
 from dataclasses import dataclass
@@ -166,9 +180,10 @@ Use `Trinity2Config(...)` in place of `simli.SimliConfig(...)`, only on plugin v
 | `429` | the account is already running its maximum number of concurrent sessions |
 | `wait_for_join` times out | Simli couldn't reach the LiveKit server: `LIVEKIT_URL` must be public, not `localhost` |
 | Agent never joins the room | agent name mismatch between `rtc_session(agent_name=...)` and the frontend's dispatch |
+| Avatar appears but never answers; STT, LLM or TTS errors in the log | LiveKit Inference refused the request: the `LIVEKIT_API_KEY`/`SECRET` aren't from the project in `LIVEKIT_URL`, or the month's Inference credit is used up |
 
 ## Production notes
 
-- Anyone who can get a token for the LiveKit project can start a conversation and spend Simli minutes and model credit. The token endpoint must sit behind the app's sign-in.
+- Anyone who can get a token for the LiveKit project can start a conversation and spend Simli minutes and model credit (LiveKit Inference credit, with the starter's setup). The token endpoint must sit behind the app's sign-in.
 - The avatar leaves when the agent does, so ending the agent's session or deleting the room ends the Simli session and its billing.
 - Deploy with `python agent.py start` on any server, or LiveKit Cloud's agent hosting.
