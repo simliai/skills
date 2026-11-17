@@ -31,8 +31,8 @@ Also read [references/trinity-2.md](references/trinity-2.md) when the user wants
 
 | Preset | Face ID |
 |---|---|
-| Simli default (a woman) | `14c60d62-6ebf-424d-b626-1f4f91c33b04` |
-| Anna | `bf13113a-355a-4d97-8b90-4edccd1da7b2` |
+| Anna (Simli's default) | `14c60d62-6ebf-424d-b626-1f4f91c33b04` |
+| Sara | `f735e62c-dce7-4c0b-8e85-1c7e21774c45` |
 | Lukas | `a36d66df-a23d-4569-996b-d0e990019857` |
 | Mei | `084479bf-de7c-4df0-8d9c-5484193ecd27` |
 | Mateo | `99767950-9d68-4783-a305-9118006d3363` |
