@@ -1,6 +1,6 @@
 # Simli in the browser: `simli-client`
 
-Use this path when the agent's voice is already in the browser: ElevenLabs Agents, OpenAI Realtime over WebRTC, Vapi, a TTS response fetched by the page, or the user's own pipeline. The page sends audio to Simli and plays the avatar's video and voice in a `<video>` and an `<audio>` element.
+Use this path when the agent's voice is already in the browser: Gemini Live, ElevenLabs Agents, OpenAI Realtime over WebRTC, Vapi, a TTS response fetched by the page, or the user's own pipeline. The page sends audio to Simli and plays the avatar's video and voice in a `<video>` and an `<audio>` element.
 
 Live docs: https://docs.simli.com/api-reference/javascript.md (guide), https://docs.simli.com/api-reference/javascript/reference.md (every method and event).
 
@@ -176,12 +176,22 @@ With a continuous track, the track keeps sending audio (including silence), so `
 
 Simli's maintained starters implement each of these end to end; read one when the user wants a complete app. Each keeps every secret on the server.
 
+### Gemini Live (WebSocket, ephemeral token)
+
+Starter: https://github.com/simliai/create-simli-app-gemini, Simli's recommended free start: a free Google AI Studio key (`GEMINI_API_KEY`, https://aistudio.google.com/apikey, no billing needed) plus `SIMLI_API_KEY`. Key points:
+
+- **Server route** (`POST /api/gemini-token`): mint a short-lived, single-use Gemini [ephemeral token](https://aistudio.google.com/docs/live-api/ephemeral-tokens) with `GEMINI_API_KEY`, with the model, prompt and voice locked into it, so the browser can't change them. The starter's default model is `gemini-3.8-live`; match the voice to the face (`Sulafat` for the default face, a woman; `Achird` for a male face).
+- Start Simli first; open the Live API WebSocket only once the avatar is on screen, then have the model greet the user.
+- Mic in: PCM16 16 kHz. Model audio out: PCM16 **24 kHz**: resample to 16 kHz, then `sendAudioData` ([audio.md](audio.md)). Never play the model's audio directly.
+- `serverContent.interrupted` → `ClearBuffer()`. On `goAway` or close, end both sides: a Live connection lasts about 10 minutes.
+- Free tier: Google may use prompts and responses to improve its products, rate limits are low, and apps serving users in the EEA, Switzerland or the UK must use the paid tier. Tell the user before they ship on it (the starter's README, "Free tier").
+
 ### ElevenLabs Agents (WebSocket)
 
 **Read [elevenlabs.md](elevenlabs.md)**: a complete Next.js app (token route, signed-URL route, client component with mic capture, lifecycle and error handling). Starter: https://github.com/simliai/create-simli-app-elevenlabs. Key points:
 
 - Both keys stay on the server: Simli via the token route, ElevenLabs via a signed-URL route: `GET https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=...` (hyphenated path; older docs used `get_signed_url`), header `xi-api-key`, response `{signed_url}`. Signed URLs expire after about 15 minutes, so fetch one per conversation. Use either signed URLs (agent authentication on) or a domain allowlist, not both.
-- The ElevenLabs agent's output audio format must be **PCM 16000 Hz** (`pcm_16000`). Its greeting is the agent's **First message** setting.
+- The ElevenLabs agent's output audio format must be **PCM 16000 Hz** (`pcm_16000`). Its greeting is the agent's **First message** setting. The starter sets both itself: it needs only `SIMLI_API_KEY` and `ELEVENLABS_API_KEY`, and its server creates and configures the agent through the Agents API (see [elevenlabs.md](elevenlabs.md#no-dashboard-steps-let-the-server-manage-the-agent)). `ELEVENLABS_AGENT_ID` is optional there, for an agent the user configured themselves.
 - Start Simli first, then open the ElevenLabs socket. `audio` events go to `sendAudioData`, `interruption` to `ClearBuffer()`, `ping` gets `{type: "pong", event_id}`. Show `client_error` messages and unexpected close codes to the user.
 - Use `handleSilence: true`.
 - Prefer the raw WebSocket over the ElevenLabs JS SDK (`@elevenlabs/client`) here: in WebSocket mode the SDK always plays the agent's audio itself (`onAudio` gives you the audio, but playback can only be silenced with `setVolume(0)` after the session starts), and in WebRTC mode it doesn't expose the remote track. If the user's app already depends on the SDK, use `onAudio` → `sendAudioData` plus `setVolume(0)` immediately after start, and say that it's timing-dependent.

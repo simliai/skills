@@ -21,9 +21,9 @@ Then ask your agent something like:
 | File | Covers |
 |---|---|
 | `SKILL.md` | Picking the integration path, keys and faces, rules for safe and good-looking sessions, definition of done |
-| `references/livekit.md` | LiveKit Agents plugin, start order, Trinity-2 config workaround |
+| `references/livekit.md` | LiveKit Agents plugin on LiveKit Inference, start order, Trinity-2 config workaround |
 | `references/pipecat.md` | Pipecat `SimliVideoService`, pipeline placement, known issues |
-| `references/browser-js.md` | `simli-client`: server token route, React component, ElevenLabs / OpenAI Realtime / Vapi / custom TTS |
+| `references/browser-js.md` | `simli-client`: server token route, React component, Gemini Live / ElevenLabs / OpenAI Realtime / Vapi / custom TTS |
 | `references/elevenlabs.md` | Complete, tested Next.js app: ElevenLabs Agents speaking through a Simli avatar at 16:9 |
 | `references/python-sdk.md` | `simli-ai`: sessions, renderers, frames, errors |
 | `references/trinity-2.md` | Video size, avatar position, camera, backgrounds, creating avatars from a photo |
